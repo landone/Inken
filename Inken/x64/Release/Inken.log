@@ -1,9 +1,0 @@
-﻿  main.cpp
-C:\Users\animo\Documents\GitHub\Inken\Inken\main.cpp(79,50): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\animo\Documents\GitHub\Inken\Inken\main.cpp(102,47): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-  Generating code
-  5 of 276 functions ( 1.8%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    2 functions had inline decision re-evaluated but remain unchanged
-  Finished generating code
-  Inken.vcxproj -> C:\Users\animo\Documents\GitHub\Inken\x64\Release\Inken.exe
