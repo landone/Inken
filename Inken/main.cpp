@@ -1,109 +1,61 @@
-#include <Lensce/LensceServer.h>
-#include <Lensce/LensceClient.h>
+#include <time.h>
 #include <iostream>
-#include <string>
 
-void onConnect(int client) {
+#include "Assets.h"
+#include "GameDisplay.h"
+#include "GameManager.h"
+#include "Image.h"
+#include "Text.h"
 
-	printf("Client%d connected\n", client);
-
-}
-
-void onDisconnect(int client) {
-
-	printf("Client%d disconnected\n", client);
-
-}
-
-void onServerTCP(int client, char* buf, int size) {
-
-	printf("Client%d: ", client);
-	for (int i = 0; i < size; i++) {
-		printf("%c", buf[i]);
-	}
-	printf("\n");
-
-}
-
-void onClientTCP(char* buf, int size) {
-
-	printf("Server: ");
-	for (int i = 0; i < size; i++) {
-		printf("%c", buf[i]);
-	}
-	printf("\n");
-
-}
+#define HIDE_CONSOLE	(false)
 
 int main() {
 
-	LensceSocket::printErrors(true);
-	std::string input;
-	int port = 4000;
-	int maxClients = 10;
-	bool server = false;
-	while(true) {
+	//ShowWindow(GetConsoleWindow(), (HIDE_CONSOLE ? SW_HIDE : SW_NORMAL));
 
-		std::getline(std::cin, input);
-		if (input.compare("s") == 0) {
-			
-			printf("Server Mode\n");
-			server = true;
-			break;
+	srand(clock()); //Enable random number gens
+	
+	/* Display initializes GLEW, so it must occur first */
+	GameDisplay display(800, 450, "Inken");
+	Assets::LoadAll();
 
-		}
-		else if (input.compare("c") == 0) {
+	GameManager gameMan;
 
-			printf("Client Mode\n");
-			server = false;
-			break;
+	Camera& cam = gameMan.getCamera();
+	Camera& guiCam = gameMan.getGUICamera();
 
-		}
+	display.setAmbientColor(0, 0.5, 1);
+	display.setResizable(true);
 
-	}
+	while (display.isOpen()) {
 
-	if (server) {
+		/* Update frame listeners */
+		Evt_Display::sendFrame();
 
-		LensceServer server(port, maxClients, maxClients);
-		server.connectCallback(onConnect);
-		server.disconnectCallback(onDisconnect);
-		server.receiveTCPCallback(onServerTCP);
-		server.start();
-		while (server.isRunning()) {
+		/* Draw Geometry */
+		display.gBuffer.bind();
+		display.gBuffer.setViewMat(cam.getViewMatrix());
+		Evt_Display::sendDrawGeometry(display.gBuffer);
+		/* Draw 3D GUI */
+		display.gBuffer.setViewMat(guiCam.getViewMatrix());
+		glDisable(GL_DEPTH_TEST);
+		Evt_Display::sendDraw3DGUI(display.gBuffer);
+		/* Draw 2D GUI */
+		display.gBuffer.setGUI(true);
+		display.gBuffer.setViewMat(glm::mat4());
+		Evt_Display::sendDrawGUI(display.gBuffer);
+		glEnable(GL_DEPTH_TEST);
+		display.gBuffer.setGUI(false);
+		/* Apply lighting */
+		display.lightShader.bind();
+		display.lightShader.setCameraPos(cam.getPos());
+		display.lightShader.drawQuad();
+		/* Apply post effects */
+		display.postProcessor.bind();
+		display.postProcessor.drawQuad();
 
-			std::getline(std::cin, input);
-			if (input.compare("exit") == 0) {
-				break;
-			}
-			else {
-				server.sendTCPAll(input.c_str(), input.size());
-			}
-
-		}
-		server.stop();
-
-	}
-	else {
-
-		LensceClient client;
-		client.receiveTCPCallback(onClientTCP);
-		if (!client.connect("192.168.1.127", port)) {
-			printf("Unable to connect\n");
-			return 0;
-		}
-
-		while (client.isConnected()) {
-
-			std::getline(std::cin, input);
-			if (input.compare("exit") == 0) {
-				break;
-			}
-			else {
-				client.sendTCP(input.c_str(), input.size());
-			}
-
-		}
-		client.disconnect();
+		/* Swap buffers */
+		display.update();
 
 	}
 
